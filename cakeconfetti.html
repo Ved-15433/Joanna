@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Birthday Cake 🎂</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.9.6/lottie.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <style>
+      #mainTitle {
+        font-size: 32px;
+        font-family: 'Pixelify Sans', sans-serif;
+        margin-bottom: 8px;
+      }
+
+      #subTitle {
+        font-size: 18px;
+        font-family: 'Pixelify Sans', sans-serif;
+        color: #555;
+      }
+    </style>
+    
+  </head>
+  <body>
+    <div class="container" style="position: relative; z-index: 5;">
+      <div id="birthdayText"></div>
+      <div class="cake-container">
+        <div class="cake" id="cake"></div>
+      </div>
+    </div>
+
+    <button id="startMusic">▶ Play Music</button>
+    <button id="startBtn">🎤 Blow Candles</button>
+    <button>Gifts</button>
+
+    <audio id="bgMusic" src="birthday.mp3" loop></audio>
+
+
+
+<lottie-player
+  id="confettiPlayer"
+  src="confetti.json"
+  background="transparent"
+  speed="1"
+  loop="false"
+  autoplay="false"
+  style="
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    display: none;
+  "
+></lottie-player>
+ 
+
+<script>
+
+
+
+ document.getElementById("startMusic").addEventListener("click", () => {
+  document.getElementById("bgMusic").play();
+});
+  // ---------- PAGE SETUP ----------
+  const params = new URLSearchParams(window.location.search);
+  const name = params.get("name") || "JOANNA";
+  let candleCount = Math.min(Math.max(parseInt(params.get("candles")) || 4, 1), 30);
+
+  document.getElementById("birthdayText").innerHTML = `
+    <div id="mainTitle">Happy Birthday, ${name}!</div>
+    <div id="subTitle">Play the Music <br>Click the Blow Candles button and allow mic permission.<br>Make a wish and blow candles.</div>
+  `;
+
+  const cake = document.getElementById("cake");
+  const colors = ["green-candle", "purple-candle", "blue-candle", "yellow-candle"];
+
+  function createCandles(count) {
+  cake.innerHTML = "";
+  const candlesPerRow = 6;
+  const shiftAmount = 4;
+
+  for (let i = 0; i < count; i++) {
+    const candle = document.createElement("div");
+    candle.className = `candle ${colors[Math.floor(Math.random() * colors.length)]}`;
+
+    const row = Math.floor(i / candlesPerRow);
+    const col = i % candlesPerRow;
+
+    candle.style.position = "absolute";
+  candle.style.top = `${8 + row * 4}px`;
+candle.style.left = `${6 + col * 10 + (row % 2 ? 5 : 0)}px`;
+
+    cake.appendChild(candle);
+  }
+}
+
+
+  createCandles(candleCount);
+
+  // ---------- MIC LOGIC (Safari + Chrome) ----------
+  let audioContext;
+  let analyser;
+  let blown = false;
+
+  document.getElementById("startBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("startBtn");
+    btn.textContent = "Listening...";
+    btn.disabled = true;
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      const source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+
+      btn.remove();
+      listenForBlow();
+    } catch (e) {
+      alert("Microphone access required.");
+      btn.disabled = false;
+      btn.textContent = "🎤 Blow Candles";
+    }
+  });
+
+  function listenForBlow() {
+    const data = new Uint8Array(analyser.fftSize);
+
+    function detect() {
+      analyser.getByteTimeDomainData(data);
+
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sum += v * v;
+      }
+
+      const volume = Math.sqrt(sum / data.length);
+
+      if (volume > 0.15 && !blown) {
+        blown = true;
+        blowOutCandles();
+        return;
+      }
+
+      requestAnimationFrame(detect);
+    }
+
+    detect();
+  }
+
+  // ---------- VISUAL ONLY ----------
+  function blowOutCandles() {
+    document.querySelectorAll(".candle").forEach(candle => {
+      setTimeout(() => candle.classList.add("blown"), Math.random() * 800);
+    });
+
+    const confetti = document.getElementById("confettiPlayer");
+  confetti.style.display = "block";
+  confetti.stop();
+  confetti.play();
+
+  // hide confetti after animation ends (adjust time if needed)
+  setTimeout(() => {
+    confetti.style.display = "none";
+  }, 3000);
+
+
+    setTimeout(() => {
+      document.getElementById("subTitle").textContent =
+        "Yayy! Wishing you the happiest birthday ever!! 🎉....Now go to Gifts";
+    }, 1200);
+  }
+</script>
+
+  </body>
+</html>
